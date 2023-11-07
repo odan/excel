@@ -48,7 +48,7 @@ foreach ($rows as $row) {
 // Generate Excel file
 $excel->generate();
 
-// Save as Excel file 
+// Save as Excel file
 $data = stream_get_contents($file->getStream());
 file_put_contents(__DIR__ . '/excel.xlsx', $data);
 ```
