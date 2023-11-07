@@ -1,0 +1,7 @@
+parameters:
+	level: 8
+	paths:
+		- src
+	ignoreErrors:
+		- '#with no value type specified in iterable type iterable#'
+		- '#with no value type specified in iterable type array#'

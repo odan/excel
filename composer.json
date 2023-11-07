@@ -1,0 +1,56 @@
+{
+    "name": "odan/excel",
+    "description": "In-memory Excel file writer",
+    "license": "MIT",
+    "type": "library",
+    "keywords": [
+        "Excel",
+        "xlsx",
+        "memory"
+    ],
+    "homepage": "https://github.com/odan/excel",
+    "require": {
+        "php": "^8.1",
+        "maennchen/zipstream-php": "^3.1"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3",
+        "phpstan/phpstan": "^1",
+        "phpunit/phpunit": "^10",
+        "squizlabs/php_codesniffer": "^3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Odan\\Excel\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Odan\\Excel\\Test\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "scripts": {
+        "cs:check": [
+            "@putenv PHP_CS_FIXER_IGNORE_ENV=1",
+            "php-cs-fixer fix --dry-run --format=txt --verbose --diff --config=.cs.php --ansi"
+        ],
+        "cs:fix": [
+            "@putenv PHP_CS_FIXER_IGNORE_ENV=1",
+            "php-cs-fixer fix --config=.cs.php --ansi --verbose"
+        ],
+        "sniffer:check": "phpcs --standard=phpcs.xml",
+        "sniffer:fix": "phpcbf --standard=phpcs.xml",
+        "stan": "phpstan analyse -c phpstan.neon --no-progress --ansi",
+        "test": "phpunit --configuration phpunit.xml --do-not-cache-result --colors=always",
+        "test:all": [
+            "@cs:check",
+            "@sniffer:check",
+            "@stan",
+            "@test"
+        ],
+        "test:coverage": "php -d xdebug.mode=coverage -r \"require 'vendor/bin/phpunit';\" -- --configuration phpunit.xml --do-not-cache-result --colors=always --coverage-clover build/logs/clover.xml --coverage-html build/coverage"
+    }
+}
