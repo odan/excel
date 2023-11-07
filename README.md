@@ -23,11 +23,14 @@ composer require odan/exel
 ```php
 use Odan\Excel\ExcelWriter;
 use Odan\Excel\ZipFile;
+
 $file = new ZipFile();
 $excel = new ExcelWriter($file);
 
+// Change sheet name
 $excel->setSheetName('My Sheet');
 
+// Write headers
 $head = ['Date', 'Name', 'Amount'];
 $excel->writeHead($head);
 
