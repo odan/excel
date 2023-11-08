@@ -2,6 +2,7 @@
 
 namespace Odan\Excel;
 
+use UnexpectedValueException;
 use ZipStream\ZipStream;
 
 final class ZipFile implements FileWriterInterface, FileReaderInterface
@@ -16,9 +17,16 @@ final class ZipFile implements FileWriterInterface, FileReaderInterface
     public function __construct(string $filename = 'php://memory')
     {
         // Create ZIP file, only in-memory
-        $this->stream = fopen($filename, 'w+b');
+        $stream = fopen($filename, 'w+b');
+        if ($stream === false) {
+            throw new UnexpectedValueException('File could not be opened.');
+        }
 
+        $this->stream = $stream;
+
+        // defaultEnableZeroHeader must be set to false for Excel compatible ZIP files
         $this->zip = new ZipStream(
+            defaultEnableZeroHeader: false,
             outputStream: $this->stream,
             sendHttpHeaders: false,
         );

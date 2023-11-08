@@ -12,6 +12,7 @@ final class ExcelWriter
     private DOMDocument $sheetXml;
     private DOMNode $sheetData;
     private int $rowIndex = 0;
+    /** @var array<string, int> */
     private array $sharedStrings = [];
     private string $sheetName = 'Sheet1';
 
@@ -26,40 +27,53 @@ final class ExcelWriter
         $this->sheetName = $sheetName;
     }
 
-    public function writeHead(array $values)
+    public function writeHead(array $values): void
     {
-        $row = $this->sheetData->appendChild($this->sheetXml->createElement('row'));
-        $row->setAttribute('r', ++$this->rowIndex);
+        $row = $this->sheetXml->createElement('row');
+        $this->sheetData->appendChild($row);
+        $row->setAttribute('r', (string)++$this->rowIndex);
+
+        // @todo dynamic spans
+        $row->setAttribute('spans', '1:3');
 
         foreach ($values as $colIndex => $value) {
-            $column = $row->appendChild($this->sheetXml->createElement('c'));
+            $column = $this->sheetXml->createElement('c');
             $column->setAttribute('r', $this->mapRowColumnToString($this->rowIndex, $colIndex + 1));
+            $row->appendChild($column);
+
             // Apply the cell style by referencing it through the s attribute
             // 1 = bold style
             $column->setAttribute('s', '1');
             $column->setAttribute('t', 's');
             $sharedStringIndex = $this->createSharedStringIndex($value);
-            $column->appendChild($this->sheetXml->createElement('v', $sharedStringIndex));
+            $valueElement = $this->sheetXml->createElement('v', (string)$sharedStringIndex);
+            $column->appendChild($valueElement);
         }
     }
 
     public function writeRow(array $values): void
     {
-        $row = $this->sheetData->appendChild($this->sheetXml->createElement('row'));
-        $row->setAttribute('r', ++$this->rowIndex);
+        $row = $this->sheetXml->createElement('row');
+        $this->sheetData->appendChild($row);
+        $row->setAttribute('r', (string)++$this->rowIndex);
+        // @todo dynamic spans
+        $row->setAttribute('spans', '1:3');
 
         foreach ($values as $colIndex => $value) {
-            $column = $row->appendChild($this->sheetXml->createElement('c'));
+            $column = $this->sheetXml->createElement('c');
             $column->setAttribute('r', $this->mapRowColumnToString($this->rowIndex, $colIndex + 1));
+            $row->appendChild($column);
+
             // s = 0 = Normal font (see styles.xml)
             $column->setAttribute('s', '0');
             $column->setAttribute('t', 's');
             $sharedStringIndex = $this->createSharedStringIndex($value);
-            $column->appendChild($this->sheetXml->createElement('v', $sharedStringIndex));
+            $valueNode = $this->sheetXml->createElement('v', (string)$sharedStringIndex);
+            $column->appendChild($valueNode);
         }
     }
 
-    private function mapRowColumnToString(int $row, int $column)
+    private function mapRowColumnToString(int $row, int $column): string
     {
         $columnLetter = '';
 
@@ -88,73 +102,58 @@ final class ExcelWriter
 
     private function createSharedStringsXml(): string
     {
-        $dom = new DOMDocument('1.0', 'utf-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
         $dom->xmlStandalone = true;
 
-        $sst = $dom->appendChild($dom->createElement('sst'));
+        $sst = $dom->createElement('sst');
+        $dom->appendChild($sst);
         $sst->setAttribute('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
-        $sst->setAttribute('count', count($this->sharedStrings));
-        $sst->setAttribute('uniqueCount', count($this->sharedStrings));
+        $sst->setAttribute('count', (string)count($this->sharedStrings));
+        $sst->setAttribute('uniqueCount', (string)count($this->sharedStrings));
 
         foreach ($this->sharedStrings as $sharedString => $key) {
-            $si = $sst->appendChild($dom->createElement('si'));
-            $t = $si->appendChild($dom->createElement('t', $sharedString));
-            $t->setAttribute('xml:space', 'preserve');
+            $si = $dom->createElement('si');
+            $sst->appendChild($si);
+            $textNode = $dom->createElement('t', $sharedString);
+            // $textNode->setAttribute('xml:space', 'preserve');
+            $si->appendChild($textNode);
         }
 
-        return $dom->saveXML();
+        return (string)$dom->saveXML();
     }
 
     private function createSheetXml(): string
     {
-        $data = $this->sheetXml->saveXML();
-
-        return $data;
+        return (string)$this->sheetXml->saveXML();
     }
 
     private function createContentTypesXml(): string
     {
-        $dom = new DOMDocument('1.0', 'utf-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
+        $dom->xmlStandalone = true;
 
         // Create the root element <Types> with the xmlns attribute
-        $types = $dom->appendChild($dom->createElement('Types'));
+        $types = $dom->createElement('Types');
+        $dom->appendChild($types);
         $types->setAttribute('xmlns', 'http://schemas.openxmlformats.org/package/2006/content-types');
 
         $defaultAttributes = [
-            ['Extension' => 'xml', 'ContentType' => 'application/xml'],
             ['Extension' => 'rels', 'ContentType' => 'application/vnd.openxmlformats-package.relationships+xml'],
-            ['Extension' => 'png', 'ContentType' => 'image/png'],
-            ['Extension' => 'jpeg', 'ContentType' => 'image/jpeg'],
+            ['Extension' => 'xml', 'ContentType' => 'application/xml'],
         ];
 
         $this->createElements($dom, $types, 'Default', $defaultAttributes);
 
         $overrideAttributes = [
-            [
-                'PartName' => '/_rels/.rels',
-                'ContentType' => 'application/vnd.openxmlformats-package.relationships+xml',
-            ],
+            /* [
+                 'PartName' => '/_rels/.rels',
+                 'ContentType' => 'application/vnd.openxmlformats-package.relationships+xml',
+             ],*/
             [
                 'PartName' => '/xl/workbook.xml',
                 'ContentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml',
-            ],
-            [
-                'PartName' => '/xl/styles.xml',
-                'ContentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml',
-            ],
-            [
-                'PartName' => '/xl/worksheets/sheet1.xml',
-                'ContentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml',
-            ],
-            [
-                'PartName' => '/xl/sharedStrings.xml',
-                'ContentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml',
-            ],
-            [
-                'PartName' => '/xl/_rels/workbook.xml.rels',
-                'ContentType' => 'application/vnd.openxmlformats-package.relationships+xml',
             ],
             [
                 'PartName' => '/docProps/core.xml',
@@ -164,168 +163,291 @@ final class ExcelWriter
                 'PartName' => '/docProps/app.xml',
                 'ContentType' => 'application/vnd.openxmlformats-officedocument.extended-properties+xml',
             ],
+            [
+                'PartName' => '/xl/worksheets/sheet1.xml',
+                'ContentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml',
+            ],
+            [
+                'PartName' => '/xl/styles.xml',
+                'ContentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml',
+            ],
+
+            [
+                'PartName' => '/xl/sharedStrings.xml',
+                'ContentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml',
+            ],
+            /* [
+                 'PartName' => '/xl/_rels/workbook.xml.rels',
+                 'ContentType' => 'application/vnd.openxmlformats-package.relationships+xml',
+             ],*/
         ];
 
         $this->createElements($dom, $types, 'Override', $overrideAttributes);
 
-        return $dom->saveXML();
+        return (string)$dom->saveXML();
     }
 
     private function createWorkbookXml(): string
     {
-        $dom = new DOMDocument('1.0', 'utf-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
         $dom->xmlStandalone = true;
 
-        $workbook = $dom->appendChild($dom->createElement('workbook'));
+        $workbook = $dom->createElement('workbook');
+
+        $dom->appendChild($workbook);
         $workbook->setAttribute('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
         $workbook->setAttribute('xmlns:r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships');
 
+        $workbook->setAttribute('xmlns:mc', 'http://schemas.openxmlformats.org/markup-compatibility/2006');
+        $workbook->setAttribute('xmlns:x15', 'http://schemas.microsoft.com/office/spreadsheetml/2010/11/main');
+        $workbook->setAttribute('xmlns:xr', 'http://schemas.microsoft.com/office/spreadsheetml/2014/revision');
+        $workbook->setAttribute('xmlns:xr6', 'http://schemas.microsoft.com/office/spreadsheetml/2016/revision6');
+        $workbook->setAttribute('xmlns:xr10', 'http://schemas.microsoft.com/office/spreadsheetml/2016/revision10');
+        $workbook->setAttribute('xmlns:xr2', 'http://schemas.microsoft.com/office/spreadsheetml/2015/revision2');
+        $workbook->setAttribute('mc:Ignorable', 'x15 xr xr6 xr10 xr2');
+
         // Create child elements and set their attributes
         $fileVersion = $dom->createElement('fileVersion');
-        $fileVersion->setAttribute('appName', 'Calc');
+        $workbook->appendChild($fileVersion);
+        $fileVersion->setAttribute('appName', 'xl');
+        $fileVersion->setAttribute('lastEdited', '7');
+        $fileVersion->setAttribute('lowestEdited', '4');
+        $fileVersion->setAttribute('rupBuild', '27031');
 
         $workbookPr = $dom->createElement('workbookPr');
-        $workbookPr->setAttribute('backupFile', 'false');
-        $workbookPr->setAttribute('showObjects', 'all');
-        $workbookPr->setAttribute('date1904', 'false');
+        $workbook->appendChild($workbookPr);
+        $workbookPr->setAttribute('defaultThemeVersion', '166925');
 
-        $workbookProtection = $dom->createElement('workbookProtection');
+        $revisionPtr = $dom->createElement('xr:revisionPtr');
+        $workbook->appendChild($revisionPtr);
+        $revisionPtr->setAttribute('revIDLastSave', '0');
+        $revisionPtr->setAttribute('documentId', '8_{D45FB324-B00D-43AB-BE0A-CC2F30BE489D}');
+        $revisionPtr->setAttribute('xr6:coauthVersionLast', '47');
+        $revisionPtr->setAttribute('xr6:coauthVersionMax', '47');
+        $revisionPtr->setAttribute('xr10:uidLastSave', '{00000000-0000-0000-0000-000000000000}');
 
         $bookViews = $dom->createElement('bookViews');
+        $workbook->appendChild($bookViews);
+
         $workbookView = $dom->createElement('workbookView');
-        $workbookView->setAttribute('showHorizontalScroll', 'true');
-        $workbookView->setAttribute('showVerticalScroll', 'true');
-        $workbookView->setAttribute('showSheetTabs', 'true');
-        $workbookView->setAttribute('xWindow', '0');
-        $workbookView->setAttribute('yWindow', '0');
-        $workbookView->setAttribute('windowWidth', '16384');
-        $workbookView->setAttribute('windowHeight', '8192');
-        $workbookView->setAttribute('tabRatio', '500');
-        $workbookView->setAttribute('firstSheet', '0');
-        $workbookView->setAttribute('activeTab', '0');
+        $bookViews->appendChild($workbookView);
+        $workbookView->setAttribute('xWindow', '240');
+        $workbookView->setAttribute('yWindow', '105');
+        $workbookView->setAttribute('windowWidth', '14805');
+        $workbookView->setAttribute('windowHeight', '8010');
+        $workbookView->setAttribute('xr2:uid', '{00000000-000D-0000-FFFF-FFFF00000000}');
 
         $sheets = $dom->createElement('sheets');
+        $workbook->appendChild($sheets);
+
         $sheet = $dom->createElement('sheet');
+        $sheets->appendChild($sheet);
         $sheet->setAttribute('name', $this->sheetName);
         $sheet->setAttribute('sheetId', '1');
-        $sheet->setAttribute('state', 'visible');
         $sheet->setAttribute('r:id', 'rId2');
 
         $calcPr = $dom->createElement('calcPr');
-        $calcPr->setAttribute('iterateCount', '100');
-        $calcPr->setAttribute('refMode', 'A1');
-        $calcPr->setAttribute('iterate', 'false');
-        $calcPr->setAttribute('iterateDelta', '0.001');
+        $workbook->appendChild($calcPr);
+        $calcPr->setAttribute('calcId', '191028');
 
         $extLst = $dom->createElement('extLst');
-        $ext = $dom->createElement('ext');
-        $ext->setAttribute('xmlns:loext', 'http://schemas.libreoffice.org/');
-        $ext->setAttribute('uri', '{7626C862-2A13-11E5-B345-FEFF819CDC9F}');
-        $loext = $dom->createElement('loext:extCalcPr');
-        $loext->setAttribute('stringRefSyntax', 'CalcA1');
-
-        // Append child elements to the <workbook> element in the desired order
-        $workbook->appendChild($fileVersion);
-        $workbook->appendChild($workbookPr);
-        $workbook->appendChild($workbookProtection);
-        $workbook->appendChild($bookViews);
-        $bookViews->appendChild($workbookView);
-        $workbook->appendChild($sheets);
-        $sheets->appendChild($sheet);
-        $workbook->appendChild($calcPr);
         $workbook->appendChild($extLst);
-        $extLst->appendChild($ext);
-        $ext->appendChild($loext);
 
-        return $dom->saveXML();
+        $ext = $dom->createElement('ext');
+        $extLst->appendChild($ext);
+
+        $ext->setAttribute('xmlns:x15', 'http://schemas.microsoft.com/office/spreadsheetml/2010/11/main');
+        $ext->setAttribute('uri', '{140A7094-0E35-4892-8432-C4D2E57EDEB5}');
+        $loext = $dom->createElement('x15:workbookPr');
+        $ext->appendChild($loext);
+        $loext->setAttribute('chartTrackingRefBase', '1');
+
+        return (string)$dom->saveXML();
     }
 
     private function createStylesXml(): string
     {
-        $dom = new DOMDocument('1.0', 'utf-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
         $dom->xmlStandalone = true;
 
-        $styleSheet = $dom->appendChild($dom->createElement('styleSheet'));
+        $styleSheet = $dom->createElement('styleSheet');
+        $dom->appendChild($styleSheet);
         $styleSheet->setAttribute('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+        $styleSheet->setAttribute('xmlns:mc', 'http://schemas.openxmlformats.org/markup-compatibility/2006');
+        $styleSheet->setAttribute('xmlns:x14ac', 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac');
+        $styleSheet->setAttribute('xmlns:x16r2', 'http://schemas.microsoft.com/office/spreadsheetml/2015/02/main');
+        $styleSheet->setAttribute('xmlns:xr', 'http://schemas.microsoft.com/office/spreadsheetml/2014/revision');
+        $styleSheet->setAttribute('mc:Ignorable', 'x14ac x16r2 xr');
 
         // Create the <fonts> element with a count attribute of "2"
         $fonts = $dom->createElement('fonts');
+        $styleSheet->appendChild($fonts);
         $fonts->setAttribute('count', '2');
 
         // Create the first <font> element for the default font (not bold)
         $font1 = $dom->createElement('font');
+        $fonts->appendChild($font1);
         $sz1 = $dom->createElement('sz');
+        $font1->appendChild($sz1);
         $sz1->setAttribute('val', '11');
         $name1 = $dom->createElement('name');
+        $font1->appendChild($name1);
         $name1->setAttribute('val', 'Calibri');
         $family1 = $dom->createElement('family');
-        $family1->setAttribute('val', '2');
-        $b1 = $dom->createElement('b');
-        $b1->setAttribute('val', 'false');
-        $font1->appendChild($sz1);
-        $font1->appendChild($name1);
         $font1->appendChild($family1);
-        $font1->appendChild($b1);
+        $family1->setAttribute('val', '2');
+        $font1->appendChild($family1);
 
         // Create the second <font> element for the bold font
         $font2 = $dom->createElement('font');
-        $sz2 = $dom->createElement('sz');
-        $sz2->setAttribute('val', '11');
-        $name2 = $dom->createElement('name');
-        $name2->setAttribute('val', 'Calibri');
-        $family2 = $dom->createElement('family');
-        $family2->setAttribute('val', '2');
+        $fonts->appendChild($font2);
         $b2 = $dom->createElement('b');
-        $b2->setAttribute('val', 'true');
-        $font2->appendChild($sz2);
-        $font2->appendChild($name2);
-        $font2->appendChild($family2);
         $font2->appendChild($b2);
 
-        // Append the <font> elements to the <fonts> element
-        $fonts->appendChild($font1);
-        $fonts->appendChild($font2);
+        $sz2 = $dom->createElement('sz');
+        $font2->appendChild($sz2);
+        $sz2->setAttribute('val', '11');
+        $name2 = $dom->createElement('name');
+        $font2->appendChild($name2);
+        $name2->setAttribute('val', 'Calibri');
+        $family2 = $dom->createElement('family');
+        $font2->appendChild($family2);
+        $family2->setAttribute('val', '2');
+
+        // ----
+
+        // Create the root element <fills>
+        $fills = $dom->createElement('fills');
+        $styleSheet->appendChild($fills);
+        $fills->setAttribute('count', '2');
+
+        // Create <fill> elements
+        $fill1 = $dom->createElement('fill');
+        $fills->appendChild($fill1);
+        $patternFill1 = $dom->createElement('patternFill');
+        $patternFill1->setAttribute('patternType', 'none');
+        $fill1->appendChild($patternFill1);
+
+        $fill2 = $dom->createElement('fill');
+        $fills->appendChild($fill2);
+        $patternFill2 = $dom->createElement('patternFill');
+        $patternFill2->setAttribute('patternType', 'gray125');
+        $fill2->appendChild($patternFill2);
+
+        // Create the root element <borders>
+        $borders = $dom->createElement('borders');
+        $styleSheet->appendChild($borders);
+
+        $borders->setAttribute('count', '1');
+
+        // Create <border> element
+        $border = $dom->createElement('border');
+        $borders->appendChild($border);
+        $borderElements = ['left', 'right', 'top', 'bottom', 'diagonal'];
+
+        foreach ($borderElements as $element) {
+            $borderElement = $dom->createElement($element);
+            $border->appendChild($borderElement);
+        }
+
+        // Create the root element <cellStyleXfs>
+        $cellStyleXfs = $dom->createElement('cellStyleXfs');
+        $styleSheet->appendChild($cellStyleXfs);
+        $cellStyleXfs->setAttribute('count', '1');
+
+        // Create <xf> element
+        $xf = $dom->createElement('xf');
+        $cellStyleXfs->appendChild($xf);
+        $xf->setAttribute('numFmtId', '0');
+        $xf->setAttribute('fontId', '0');
+        $xf->setAttribute('fillId', '0');
+        $xf->setAttribute('borderId', '0');
 
         // Create the <cellXfs> element with a count attribute of "2"
         $cellXfs = $dom->createElement('cellXfs');
+        $styleSheet->appendChild($cellXfs);
         $cellXfs->setAttribute('count', '2');
 
         // Create the first <xf> element for the default font (fontId="0")
         $xf1 = $dom->createElement('xf');
+        $cellXfs->appendChild($xf1);
         $xf1->setAttribute('numFmtId', '0');
         $xf1->setAttribute('fontId', '0');
         $xf1->setAttribute('fillId', '0');
         $xf1->setAttribute('borderId', '0');
-        $xf1->setAttribute('applyFont', 'true'); // Apply default font
+        $xf1->setAttribute('xfId', '0');
 
         // Create the second <xf> element for the bold font (fontId="1")
         $xf2 = $dom->createElement('xf');
+        $cellXfs->appendChild($xf2);
         $xf2->setAttribute('numFmtId', '0');
         $xf2->setAttribute('fontId', '1');
         $xf2->setAttribute('fillId', '0');
         $xf2->setAttribute('borderId', '0');
-        $xf2->setAttribute('applyFont', 'true'); // Apply bold font
+        $xf2->setAttribute('xfId', '0');
+        $xf2->setAttribute('applyFont', '1'); // Apply bold font
 
-        // Append the <xf> elements to the <cellXfs> element
-        $cellXfs->appendChild($xf1);
-        $cellXfs->appendChild($xf2);
+        // ---
+        // Create the root element <cellStyles>
+        $cellStyles = $dom->createElement('cellStyles');
+        $styleSheet->appendChild($cellStyles);
+        $cellStyles->setAttribute('count', '1');
 
-        // Append the <fonts> and <cellXfs> elements to the <styleSheet> element
-        $styleSheet->appendChild($fonts);
-        $styleSheet->appendChild($cellXfs);
+        // Create <cellStyle> element
+        $cellStyle = $dom->createElement('cellStyle');
+        $cellStyles->appendChild($cellStyle);
+        $cellStyle->setAttribute('name', 'Normal');
+        $cellStyle->setAttribute('xfId', '0');
+        $cellStyle->setAttribute('builtinId', '0');
 
-        return $dom->saveXML();
+        // Create <dxfs> element
+        $dxfs = $dom->createElement('dxfs');
+        $styleSheet->appendChild($dxfs);
+        $dxfs->setAttribute('count', '0');
+
+        // Create <tableStyles> element
+        $tableStyles = $dom->createElement('tableStyles');
+        $styleSheet->appendChild($tableStyles);
+        $tableStyles->setAttribute('count', '0');
+        $tableStyles->setAttribute('defaultTableStyle', 'TableStyleMedium2');
+        $tableStyles->setAttribute('defaultPivotStyle', 'PivotStyleLight16');
+
+        $extLst = $dom->createElement('extLst');
+        $styleSheet->appendChild($extLst);
+
+        $ext1 = $dom->createElement('ext');
+        $extLst->appendChild($ext1);
+        $ext1->setAttribute('xmlns:x14', 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/main');
+        $ext1->setAttribute('uri', '{EB79DEF2-80B8-43e5-95BD-54CBDDF9020C}');
+
+        $x14SlicerStyles = $dom->createElement('x14:slicerStyles');
+        $ext1->appendChild($x14SlicerStyles);
+        $x14SlicerStyles->setAttribute('defaultSlicerStyle', 'SlicerStyleLight1');
+
+        $ext2 = $dom->createElement('ext');
+        $ext2->setAttribute('xmlns:x15', 'http://schemas.microsoft.com/office/spreadsheetml/2010/11/main');
+        $ext2->setAttribute('uri', '{9260A510-F301-46a8-8635-F512D64BE5F5}');
+
+        $x15TimelineStyles = $dom->createElement('x15:timelineStyles');
+        $ext2->appendChild($x15TimelineStyles);
+        $x15TimelineStyles->setAttribute('defaultTimelineStyle', 'TimeSlicerStyleLight1');
+
+        $extLst->appendChild($ext2);
+
+        return (string)$dom->saveXML();
     }
 
     private function createWorkbookRelsXml(): string
     {
-        $dom = new DOMDocument('1.0', 'utf-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
+        $dom->xmlStandalone = true;
 
         // Create the root element <Relationships> with the xmlns attribute
-        $relationships = $dom->appendChild($dom->createElement('Relationships'));
+        $relationships = $dom->createElement('Relationships');
+        $dom->appendChild($relationships);
         $relationships->setAttribute('xmlns', 'http://schemas.openxmlformats.org/package/2006/relationships');
 
         $relationshipData = [
@@ -348,15 +470,17 @@ final class ExcelWriter
 
         $this->createElements($dom, $relationships, 'Relationship', $relationshipData);
 
-        return $dom->saveXML();
+        return (string)$dom->saveXML();
     }
 
     private function createRelsXml(): string
     {
-        $dom = new DOMDocument('1.0', 'utf-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
+        $dom->xmlStandalone = true;
 
-        $relationships = $dom->appendChild($dom->createElement('Relationships'));
+        $relationships = $dom->createElement('Relationships');
+        $dom->appendChild($relationships);
         $relationships->setAttribute('xmlns', 'http://schemas.openxmlformats.org/package/2006/relationships');
 
         $relationshipItems = [
@@ -379,41 +503,39 @@ final class ExcelWriter
 
         $this->createElements($dom, $relationships, 'Relationship', $relationshipItems);
 
-        return $dom->saveXML();
+        return (string)$dom->saveXML();
     }
 
     private function createDocPropsAppXml(): string
     {
-        $dom = new DOMDocument('1.0', 'utf-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
         $dom->xmlStandalone = true;
 
         // Create the root element <Properties> with the required namespaces
-        $properties = $dom->appendChild($dom->createElement('Properties'));
+        $properties = $dom->createElement('Properties');
+        $dom->appendChild($properties);
         $properties->setAttribute('xmlns', 'http://schemas.openxmlformats.org/officeDocument/2006/extended-properties');
         $properties->setAttribute('xmlns:vt', 'http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes');
 
         // Create child elements and set their text content
-        $properties->appendChild($dom->createElement('Template'));
-        $properties->appendChild($dom->createElement('TotalTime', '1'));
-        $properties->appendChild(
-            $dom->createElement(
-                'Application',
-                'LibreOffice/7.4.3.2$Windows_X86_64 LibreOffice_project/1048a8393ae2eeec98dff31b5c133c5f1d08b890'
-            )
-        );
-        $properties->appendChild($dom->createElement('AppVersion', '15.0000'));
+        $properties->appendChild($dom->createElement('Application', 'Microsoft Excel Online'));
+        $properties->appendChild($dom->createElement('Manager'));
+        $properties->appendChild($dom->createElement('Company'));
+        $properties->appendChild($dom->createElement('HyperlinkBase'));
+        $properties->appendChild($dom->createElement('AppVersion', '16.0300'));
 
-        return $dom->saveXML();
+        return (string)$dom->saveXML();
     }
 
     private function createDocPropsCoreXml(): string
     {
-        $dom = new DOMDocument('1.0', 'utf-8');
+        $dom = new DOMDocument('1.0', 'UTF-8');
         $dom->formatOutput = true;
         $dom->xmlStandalone = true;
 
         $coreProperties = $dom->createElement('cp:coreProperties');
+        $dom->appendChild($coreProperties);
         $coreProperties->setAttribute(
             'xmlns:cp',
             'http://schemas.openxmlformats.org/package/2006/metadata/core-properties'
@@ -423,68 +545,77 @@ final class ExcelWriter
         $coreProperties->setAttribute('xmlns:dcmitype', 'http://purl.org/dc/dcmitype/');
         $coreProperties->setAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance');
 
+        $coreProperties->appendChild($dom->createElement('dc:title'));
+        $coreProperties->appendChild($dom->createElement('dc:subject'));
+        $coreProperties->appendChild($dom->createElement('dc:creator'));
+        $coreProperties->appendChild($dom->createElement('cp:keywords'));
+        $coreProperties->appendChild($dom->createElement('dc:description'));
+        $coreProperties->appendChild($dom->createElement('cp:lastModifiedBy'));
+        $coreProperties->appendChild($dom->createElement('cp:revision'));
+
         // Create child elements and set their attributes and text content
-        $dctermsCreated = $dom->createElement('dcterms:created');
-        $dctermsCreated->setAttribute('xsi:type', 'dcterms:W3CDTF');
-        $dctermsCreated->nodeValue = '2023-11-04T22:53:36Z';
-
-        $dcCreator = $dom->createElement('dc:creator');
-        $dcDescription = $dom->createElement('dc:description');
-        $dcLanguage = $dom->createElement('dc:language');
-        $dcLanguage->nodeValue = 'de-DE';
-
-        $cpLastModifiedBy = $dom->createElement('cp:lastModifiedBy');
-
-        $dctermsModified = $dom->createElement('dcterms:modified');
-        $dctermsModified->setAttribute('xsi:type', 'dcterms:W3CDTF');
-        $dctermsModified->nodeValue = '2023-11-04T22:54:48Z';
-
-        $cpRevision = $dom->createElement('cp:revision');
-        $cpRevision->nodeValue = '1';
-
-        $dcSubject = $dom->createElement('dc:subject');
-        $dcTitle = $dom->createElement('dc:title');
-
+        $dctermsCreated = $dom->createElement('dcterms:created', date('Y-m-d\TH:i:s\Z'));
         $coreProperties->appendChild($dctermsCreated);
-        $coreProperties->appendChild($dcCreator);
-        $coreProperties->appendChild($dcDescription);
-        $coreProperties->appendChild($dcLanguage);
-        $coreProperties->appendChild($cpLastModifiedBy);
+        $dctermsCreated->setAttribute('xsi:type', 'dcterms:W3CDTF');
+
+        $dctermsModified = $dom->createElement('dcterms:modified', date('Y-m-d\TH:i:s\Z'));
         $coreProperties->appendChild($dctermsModified);
-        $coreProperties->appendChild($cpRevision);
-        $coreProperties->appendChild($dcSubject);
-        $coreProperties->appendChild($dcTitle);
+        $dctermsModified->setAttribute('xsi:type', 'dcterms:W3CDTF');
 
-        $dom->appendChild($coreProperties);
+        $coreProperties->appendChild($dom->createElement('cp:category'));
+        $coreProperties->appendChild($dom->createElement('cp:contentStatus'));
 
-        return $dom->saveXML();
+        return (string)$dom->saveXML();
     }
 
     private function initSheetXml(): void
     {
         // https://learn.microsoft.com/en-us/office/open-xml/working-with-sheets
 
-        $this->sheetXml = new DOMDocument('1.0', 'utf-8');
+        $this->sheetXml = new DOMDocument('1.0', 'UTF-8');
         $this->sheetXml->formatOutput = true;
+        $this->sheetXml->xmlStandalone = true;
 
-        $worksheet = $this->sheetXml->appendChild($this->sheetXml->createElement('worksheet'));
+        $worksheet = $this->sheetXml->createElement('worksheet');
+        $this->sheetXml->appendChild($worksheet);
         $worksheet->setAttribute('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
         $worksheet->setAttribute('xmlns:r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships');
-        $worksheet->setAttribute('xmlns:xdr', 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing');
-        $worksheet->setAttribute('xmlns:x14', 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/main');
-        $worksheet->setAttribute('xmlns:xr2', 'http://schemas.microsoft.com/office/spreadsheetml/2015/revision2');
         $worksheet->setAttribute('xmlns:mc', 'http://schemas.openxmlformats.org/markup-compatibility/2006');
+        $worksheet->setAttribute('xmlns:x14ac', 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac');
+        $worksheet->setAttribute('xmlns:xr', 'http://schemas.microsoft.com/office/spreadsheetml/2014/revision');
+        $worksheet->setAttribute('xmlns:xr2', 'http://schemas.microsoft.com/office/spreadsheetml/2015/revision2');
+        $worksheet->setAttribute('xmlns:xr3', 'http://schemas.microsoft.com/office/spreadsheetml/2016/revision3');
+        $worksheet->setAttribute('mc:Ignorable', 'x14ac xr xr2 xr3');
+        $worksheet->setAttribute('xr:uid', '{00000000-0001-0000-0000-000000000000}');
 
-        // $sheetPr = $worksheet->appendChild($this->sheetXml->createElement('sheetPr'));
-        // $sheetPr->setAttribute('filterMode', 'false');
+        $dimension = $this->sheetXml->createElement('dimension');
+        $worksheet->appendChild($dimension);
+        // @todo make dynamic
+        $dimension->setAttribute('ref', 'A1:C4');
 
-        // $pageSetUpPr = $sheetPr->appendChild($this->sheetXml->createElement('pageSetUpPr'));
-        // $pageSetUpPr->setAttribute('fitToPage', 'false');
+        $sheetViews = $this->sheetXml->createElement('sheetViews');
+        $worksheet->appendChild($sheetViews);
 
-        // $dimension = $sheetPr->appendChild($this->sheetXml->createElement('dimension'));
-        // $dimension->setAttribute('ref', 'A1:C3');
+        $sheetView = $this->sheetXml->createElement('sheetView');
+        $sheetViews->appendChild($sheetView);
+        $sheetView->setAttribute('tabSelected', '1');
+        $sheetView->setAttribute('workbookViewId', '0');
 
-        $this->sheetData = $worksheet->appendChild($this->sheetXml->createElement('sheetData'));
+        $sheetFormatPr = $this->sheetXml->createElement('sheetFormatPr');
+        $worksheet->appendChild($sheetFormatPr);
+        $sheetFormatPr->setAttribute('defaultRowHeight', '15');
+
+        $this->sheetData = $this->sheetXml->createElement('sheetData');
+        $worksheet->appendChild($this->sheetData);
+
+        $pageMargins = $this->sheetXml->createElement('pageMargins');
+        $worksheet->appendChild($pageMargins);
+        $pageMargins->setAttribute('left', '0.7');
+        $pageMargins->setAttribute('right', '0.7');
+        $pageMargins->setAttribute('top', '0.75');
+        $pageMargins->setAttribute('bottom', '0.75');
+        $pageMargins->setAttribute('header', '0.3');
+        $pageMargins->setAttribute('footer', '0.3');
     }
 
     private function createSharedStringIndex(string $string): int
@@ -500,7 +631,7 @@ final class ExcelWriter
         return $newIndex;
     }
 
-    public function createElements(DOMDocument $dom, DOMElement $parentElement, $tagName, $items)
+    public function createElements(DOMDocument $dom, DOMElement $parentElement, string $tagName, array $items): void
     {
         foreach ($items as $item) {
             $element = $this->createElementWithAttributes($dom, $tagName, $item);

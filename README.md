@@ -9,13 +9,23 @@ Extreme fast in-memory Excel (XLSX) file writer.
 ## Features
 
 - Extreme performance and minimal memory usage.
-- Dynamic sheet name.
-- Bold font for header column.
+- No hard disk access required.
+- Header columns with bold font.
+- Custom sheet name.
+
+## Limitations
+
+The purpose of this package is to provide a very fast and 
+memory efficient XLSX file generator. It is designed for 
+very fast data output, but not for fancy worksheet styles.
+If you need more flexibility in terms of multiple 
+sheets and colorful designs, you may use a 
+different package, such as PhpSpreadsheet.
 
 ## Installation
 
 ```bash
-composer require odan/exel
+composer require odan/excel
 ```
 
 ## Usage

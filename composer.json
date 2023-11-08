@@ -10,7 +10,8 @@
     ],
     "homepage": "https://github.com/odan/excel",
     "require": {
-        "php": "^8.1",
+        "php": "~8.1 || ~8.2",
+        "ext-dom": "*",
         "maennchen/zipstream-php": "^3.1"
     },
     "require-dev": {

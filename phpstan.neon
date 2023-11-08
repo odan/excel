@@ -3,5 +3,4 @@ parameters:
 	paths:
 		- src
 	ignoreErrors:
-		- '#with no value type specified in iterable type iterable#'
-		- '#with no value type specified in iterable type array#'
+		- "#Method (.*) has parameter (.*) with no value type specified in iterable type array#"
