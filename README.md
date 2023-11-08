@@ -16,6 +16,8 @@ Extreme fast in-memory Excel (XLSX) file writer.
 - Multiple sheets in a workbook.
 - Header columns with bold font.
 - Custom worksheet name.
+- Data types for rows: string, int, float
+- Data types for columns: string
 
 ## Limitations
 
@@ -52,13 +54,13 @@ $sheet->addColumns($columns);
 
 // Write data
 $rows = [
-    ['2023-01-31', 'James', '220'],
-    ['2023-03-28', 'Mike', '153.5'],
-    ['2024-07-02', 'John', '34.12'],
+    ['2023-01-31', 'James', 220],
+    ['2023-03-28', 'Mike', 153.5],
+    ['2024-07-02', 'Sally', 34.12],
 ];
 
 foreach ($rows as $row) {
-    $sheet->writeRow($row);
+    $sheet->addRow($row);
 }
 
 // Save as Excel file

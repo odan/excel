@@ -67,9 +67,17 @@ final class ExcelWorksheet
 
             // s = 0 = Normal font (see styles.xml)
             $column->setAttribute('s', '0');
-            $column->setAttribute('t', 's');
-            $sharedStringIndex = $this->sharedStrings->add($value);
-            $valueNode = $this->sheetXml->createElement('v', (string)$sharedStringIndex);
+
+            // Detect numeric types (not values)
+            if (is_int($value) || is_float($value)) {
+                $column->setAttribute('t', 'n');
+                $valueNode = $this->sheetXml->createElement('v', (string)$value);
+            } else {
+                $column->setAttribute('t', 's');
+                $sharedStringIndex = $this->sharedStrings->add((string)$value);
+                $valueNode = $this->sheetXml->createElement('v', (string)$sharedStringIndex);
+            }
+
             $column->appendChild($valueNode);
         }
     }

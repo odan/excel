@@ -38,9 +38,9 @@ final class ExcelWriterTest extends TestCase
         $sheet2->addColumns($columns);
 
         $data = [
-            ['2023-12-31', 'Max', '220', '0.1'],
-            ['2023-8-23', 'John', '1234.5', '0.3'],
-            ['2023-06-01', 'Daniel', '6789.12', '1.4'],
+            ['2023-12-31', 'Max', '220', 0.1],
+            ['2023-8-23', 'John', '1234.5', 0.3],
+            ['2023-06-01', 'Daniel', '6789.12', 1.4],
         ];
 
         // Write data
