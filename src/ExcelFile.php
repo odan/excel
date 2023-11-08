@@ -5,7 +5,7 @@ namespace Odan\Excel;
 use UnexpectedValueException;
 use ZipStream\ZipStream;
 
-final class ExcelStream implements FileWriterInterface, FileReaderInterface
+final class ExcelFile implements FileWriterInterface, FileReaderInterface
 {
     private ZipStream $zip;
 
@@ -32,7 +32,7 @@ final class ExcelStream implements FileWriterInterface, FileReaderInterface
         );
     }
 
-    public function addFile(string $name, string $data): void
+    public function write(string $name, string $data): void
     {
         $this->zip->addFile(
             fileName: $name,
@@ -43,10 +43,9 @@ final class ExcelStream implements FileWriterInterface, FileReaderInterface
     /**
      * @return resource
      */
-    public function getStream(): mixed
+    public function readStream(): mixed
     {
         $this->zip->finish();
-
         rewind($this->stream);
 
         return $this->stream;

@@ -7,22 +7,19 @@ use DOMElement;
 
 final class ExcelWorkbook
 {
-    private FileWriterInterface $file;
-
-    /** @var ExcelSheet[] */
+    /** @var ExcelWorksheet[] */
     private array $sheets = [];
 
     private SharedStrings $sharedStrings;
 
-    public function __construct(FileWriterInterface $file)
+    public function __construct()
     {
-        $this->file = $file;
         $this->sharedStrings = new SharedStrings();
     }
 
-    public function createSheet(string $sheetName = 'Sheet1'): ExcelSheet
+    public function addSheet(string $sheetName = 'Sheet1'): ExcelWorksheet
     {
-        $sheet = new ExcelSheet($this->sharedStrings);
+        $sheet = new ExcelWorksheet($this->sharedStrings);
         $sheet->setSheetName($sheetName);
 
         $this->sheets[] = $sheet;
@@ -30,20 +27,20 @@ final class ExcelWorkbook
         return $sheet;
     }
 
-    public function generate(): void
+    public function save(FileWriterInterface $file): void
     {
-        $this->file->addFile('[Content_Types].xml', $this->createContentTypesXml());
-        $this->file->addFile('_rels/.rels', $this->createRelsXml());
-        $this->file->addFile('docProps/app.xml', $this->createDocPropsAppXml());
-        $this->file->addFile('docProps/core.xml', $this->createDocPropsCoreXml());
-        $this->file->addFile('xl/_rels/workbook.xml.rels', $this->createWorkbookRelsXml());
-        $this->file->addFile('xl/styles.xml', $this->createStylesXml());
-        $this->file->addFile('xl/workbook.xml', $this->createWorkbookXml());
-        $this->file->addFile('xl/sharedStrings.xml', $this->createSharedStringsXml());
+        $file->write('[Content_Types].xml', $this->createContentTypesXml());
+        $file->write('_rels/.rels', $this->createRelsXml());
+        $file->write('docProps/app.xml', $this->createDocPropsAppXml());
+        $file->write('docProps/core.xml', $this->createDocPropsCoreXml());
+        $file->write('xl/_rels/workbook.xml.rels', $this->createWorkbookRelsXml());
+        $file->write('xl/styles.xml', $this->createStylesXml());
+        $file->write('xl/workbook.xml', $this->createWorkbookXml());
+        $file->write('xl/sharedStrings.xml', $this->createSharedStringsXml());
 
         foreach ($this->sheets as $index => $sheet) {
             $filename = sprintf('xl/worksheets/sheet%s.xml', $index + 1);
-            $this->file->addFile($filename, $sheet->createSheetXml());
+            $file->write($filename, $sheet->createSheetXml());
         }
     }
 
@@ -66,10 +63,6 @@ final class ExcelWorkbook
         $this->createElements($dom, $types, 'Default', $defaultAttributes);
 
         $overrideAttributes = [
-            /* [
-                 'PartName' => '/_rels/.rels',
-                 'ContentType' => 'application/vnd.openxmlformats-package.relationships+xml',
-             ],*/
             [
                 'PartName' => '/xl/workbook.xml',
                 'ContentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml',
@@ -95,10 +88,6 @@ final class ExcelWorkbook
                 'PartName' => '/xl/sharedStrings.xml',
                 'ContentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml',
             ],
-            /* [
-                 'PartName' => '/xl/_rels/workbook.xml.rels',
-                 'ContentType' => 'application/vnd.openxmlformats-package.relationships+xml',
-             ],*/
         ];
 
         $this->createElements($dom, $types, 'Override', $overrideAttributes);
@@ -495,7 +484,7 @@ final class ExcelWorkbook
         $dom->formatOutput = true;
         $dom->xmlStandalone = true;
 
-        $sharedStrings = $this->sharedStrings->getSharedStrings();
+        $sharedStrings = $this->sharedStrings->all();
         $count = (string)count($sharedStrings);
 
         $sst = $dom->createElement('sst');

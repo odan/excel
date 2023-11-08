@@ -7,5 +7,5 @@ interface FileReaderInterface
     /**
      * @return resource
      */
-    public function getStream(): mixed;
+    public function readStream(): mixed;
 }

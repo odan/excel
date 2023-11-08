@@ -8,15 +8,18 @@ Extreme fast in-memory Excel (XLSX) file writer.
 
 ## Features
 
-- Extreme performance and minimal memory usage.
-- No hard disk access required.
+- Optimized for minimal memory usage and high performance.
+- Compatibility with Microsoft Excel 2007-365 (ISO/IEC 29500-1:2016).
+- Compatibility with LibreOffice / OpenOffice Calc.
+- In-memory operation by default.
+- Optional hard disk access, when memory limitations are reached.
 - Header columns with bold font.
-- Custom sheet name.
+- Custom worksheet name.
 
 ## Limitations
 
 The purpose of this package is to provide a very fast and 
-memory efficient XLSX file generator. It is designed for 
+memory efficient XLSX file generator. It's designed for 
 very fast data output, but not for fancy worksheet styles.
 If you need more flexibility in terms of multiple 
 sheets and colorful designs, you may use a 
@@ -32,17 +35,14 @@ composer require odan/excel
 
 ```php
 use Odan\Excel\ExcelWorkbook;
-use Odan\Excel\ExcelStream;
+use Odan\Excel\ExcelFile;
 
-$file = new ExcelStream();
-$excel = new ExcelWorkbook($file);
+$workbook = new ExcelWorkbook();
+$sheet = $workbook->addSheet('My Sheet');
 
-// Change sheet name
-$excel->setSheetName('My Sheet');
-
-// Write headers
-$head = ['Date', 'Name', 'Amount'];
-$excel->writeHead($head);
+// Write header columns
+$columns = ['Date', 'Name', 'Amount'];
+$sheet->addColumns($columns);
 
 // Write data
 $rows = [
@@ -52,15 +52,16 @@ $rows = [
 ];
 
 foreach ($rows as $row) {
-    $excel->writeRow($row);
+    $sheet->writeRow($row);
 }
 
-// Generate Excel file
-$excel->generate();
-
 // Save as Excel file
-$data = stream_get_contents($file->getStream());
-file_put_contents(__DIR__ . '/excel.xlsx', $data);
+$file = new ExcelFile();
+$workbook->save($file);
+
+// Save file in filesystem
+$data = stream_get_contents($file->readStream());
+file_put_contents(__DIR__ . '/filename.xlsx', $data);
 ```
 
 ## License

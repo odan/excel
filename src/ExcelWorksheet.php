@@ -5,7 +5,7 @@ namespace Odan\Excel;
 use DOMDocument;
 use DOMNode;
 
-final class ExcelSheet
+final class ExcelWorksheet
 {
     private DOMDocument $sheetXml;
 
@@ -28,7 +28,7 @@ final class ExcelSheet
         $this->sheetName = $sheetName;
     }
 
-    public function addHeader(array $values): void
+    public function addColumns(array $values): void
     {
         $row = $this->sheetXml->createElement('row');
         $this->sheetData->appendChild($row);
@@ -46,7 +46,7 @@ final class ExcelSheet
             // 1 = bold style
             $column->setAttribute('s', '1');
             $column->setAttribute('t', 's');
-            $sharedStringIndex = $this->sharedStrings->addString($value);
+            $sharedStringIndex = $this->sharedStrings->add($value);
             $valueElement = $this->sheetXml->createElement('v', (string)$sharedStringIndex);
             $column->appendChild($valueElement);
         }
@@ -68,7 +68,7 @@ final class ExcelSheet
             // s = 0 = Normal font (see styles.xml)
             $column->setAttribute('s', '0');
             $column->setAttribute('t', 's');
-            $sharedStringIndex = $this->sharedStrings->addString($value);
+            $sharedStringIndex = $this->sharedStrings->add($value);
             $valueNode = $this->sheetXml->createElement('v', (string)$sharedStringIndex);
             $column->appendChild($valueNode);
         }

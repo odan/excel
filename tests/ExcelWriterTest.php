@@ -3,7 +3,7 @@
 namespace App\Excel\Test;
 
 use DOMDocument;
-use Odan\Excel\ExcelStream;
+use Odan\Excel\ExcelFile;
 use Odan\Excel\ExcelWorkbook;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
@@ -13,12 +13,12 @@ final class ExcelWriterTest extends TestCase
 {
     public function test(): void
     {
-        $file = new ExcelStream();
-        $workbook = new ExcelWorkbook($file);
-        $sheet = $workbook->createSheet('My Sheet');
+        $workbook = new ExcelWorkbook();
+        $sheet = $workbook->addSheet('My Sheet');
 
-        $head = ['Date', 'Name', 'Amount'];
-        $sheet->addHeader($head);
+        // Header columns
+        $columns = ['Date', 'Name', 'Amount'];
+        $sheet->addColumns($columns);
 
         $data = [
             ['2003-12-31', 'James', '220'],
@@ -31,14 +31,13 @@ final class ExcelWriterTest extends TestCase
             $sheet->addRow($rowData);
         }
 
-        $workbook->generate();
+        $file = new ExcelFile();
+        $workbook->save($file);
 
-        $stream = $file->getStream();
-        $data = stream_get_contents($stream);
-        // file_put_contents(__DIR__ . '/file.xlsx', $data);
+        $data = stream_get_contents($file->readStream());
+        file_put_contents(__DIR__ . '/file.xlsx', $data);
 
         $this->assertStringStartsWith('PK', $data);
-        // $this->assertSame(3915, strlen($data));
     }
 
     public function formatXlsx(): void

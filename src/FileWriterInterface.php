@@ -4,5 +4,5 @@ namespace Odan\Excel;
 
 interface FileWriterInterface
 {
-    public function addFile(string $name, string $data): void;
+    public function write(string $name, string $data): void;
 }

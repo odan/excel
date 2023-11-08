@@ -7,7 +7,7 @@ final class SharedStrings
     /** @var array<string, int> */
     private array $sharedStrings = [];
 
-    public function addString(string $string): int
+    public function add(string $string): int
     {
         $index = $this->sharedStrings[$string] ?? null;
         if ($index !== null) {
@@ -21,7 +21,7 @@ final class SharedStrings
     }
 
     /** @return array<string, int> */
-    public function getSharedStrings(): array
+    public function all(): array
     {
         return $this->sharedStrings;
     }
