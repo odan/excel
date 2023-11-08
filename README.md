@@ -13,16 +13,22 @@ Extreme fast in-memory Excel (XLSX) file writer.
 - Compatibility with LibreOffice / OpenOffice Calc.
 - In-memory operation by default.
 - Optional hard disk access, when memory limitations are reached.
+- Multiple sheets in a workbook.
 - Header columns with bold font.
 - Custom worksheet name.
 
 ## Limitations
 
-The purpose of this package is to provide a very fast and 
-memory efficient XLSX file generator. It's designed for 
+* Number of workbooks: Limited by available memory and system resources.
+* Sheets in a workbook: Limited by available memory (default is 1 sheet).
+* Maximal number of columns: 16,384 (specification limit)
+* Maximal number of rows: 1,048,576 (specification limit)
+* Font styles: 2 (normal for rows and **bold** for columns)
+
+The purpose of this package is to provide a very fast and
+memory efficient Excel (XLSX) file generator. It is designed for
 very fast data output, but not for fancy worksheet styles.
-If you need more flexibility in terms of multiple 
-sheets and colorful designs, you may use a 
+If you need more layout and color options, you may better use a
 different package, such as PhpSpreadsheet.
 
 ## Installation

@@ -31,6 +31,23 @@ final class ExcelWriterTest extends TestCase
             $sheet->addRow($rowData);
         }
 
+        $sheet2 = $workbook->addSheet('My Sheet 2');
+
+        // Header columns
+        $columns = ['Date', 'Name', 'Amount', 'Fee'];
+        $sheet2->addColumns($columns);
+
+        $data = [
+            ['2023-12-31', 'Max', '220', '0.1'],
+            ['2023-8-23', 'John', '1234.5', '0.3'],
+            ['2023-06-01', 'Daniel', '6789.12', '1.4'],
+        ];
+
+        // Write data
+        foreach ($data as $rowData) {
+            $sheet2->addRow($rowData);
+        }
+
         $file = new ExcelFile();
         $workbook->save($file);
 

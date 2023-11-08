@@ -149,12 +149,14 @@ final class ExcelWorkbook
         $sheets = $dom->createElement('sheets');
         $workbook->appendChild($sheets);
 
+        $sheetId = 1;
+        $relationshipId = 3;
         foreach ($this->sheets as $excelSheet) {
             $sheet = $dom->createElement('sheet');
             $sheets->appendChild($sheet);
             $sheet->setAttribute('name', $excelSheet->getName());
-            $sheet->setAttribute('sheetId', '1'); // @todo Dynamic?
-            $sheet->setAttribute('r:id', 'rId2'); // @todo Dynamic?
+            $sheet->setAttribute('sheetId', (string)$sheetId++);
+            $sheet->setAttribute('r:id', sprintf('rId%s', $relationshipId++));
         }
 
         $calcPr = $dom->createElement('calcPr');
@@ -368,15 +370,19 @@ final class ExcelWorkbook
             ],
             [
                 'Id' => 'rId2',
-                'Type' => 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet',
-                'Target' => 'worksheets/sheet1.xml',
-            ],
-            [
-                'Id' => 'rId3',
                 'Type' => 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings',
                 'Target' => 'sharedStrings.xml',
             ],
         ];
+
+        $relationshipId = 3;
+        foreach ($this->sheets as $index => $sheet) {
+            $relationshipData[] = [
+                'Id' => sprintf('rId%s', $relationshipId++),
+                'Type' => 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet',
+                'Target' => sprintf('worksheets/sheet%s.xml', $index + 1),
+            ];
+        }
 
         $this->createElements($dom, $relationships, 'Relationship', $relationshipData);
 

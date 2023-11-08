@@ -3,6 +3,7 @@
 namespace Odan\Excel;
 
 use DOMDocument;
+use DOMElement;
 use DOMNode;
 
 final class ExcelWorksheet
@@ -16,6 +17,10 @@ final class ExcelWorksheet
     private string $sheetName = 'Sheet1';
 
     private SharedStrings $sharedStrings;
+
+    private DOMElement $dimension;
+    private int $boundRow = 1;
+    private int $boundColumn = 1;
 
     public function __construct(SharedStrings $sharedStrings)
     {
@@ -34,12 +39,9 @@ final class ExcelWorksheet
         $this->sheetData->appendChild($row);
         $row->setAttribute('r', (string)++$this->rowIndex);
 
-        // @todo dynamic spans
-        $row->setAttribute('spans', '1:3');
-
         foreach ($values as $colIndex => $value) {
             $column = $this->sheetXml->createElement('c');
-            $column->setAttribute('r', $this->mapRowColumnToString($this->rowIndex, $colIndex + 1));
+            $column->setAttribute('r', $this->getCoordinate($this->rowIndex, $colIndex + 1));
             $row->appendChild($column);
 
             // Apply the cell style by referencing it through the s attribute
@@ -57,12 +59,10 @@ final class ExcelWorksheet
         $row = $this->sheetXml->createElement('row');
         $this->sheetData->appendChild($row);
         $row->setAttribute('r', (string)++$this->rowIndex);
-        // @todo dynamic spans
-        $row->setAttribute('spans', '1:3');
 
         foreach ($values as $colIndex => $value) {
             $column = $this->sheetXml->createElement('c');
-            $column->setAttribute('r', $this->mapRowColumnToString($this->rowIndex, $colIndex + 1));
+            $column->setAttribute('r', $this->getCoordinate($this->rowIndex, $colIndex + 1));
             $row->appendChild($column);
 
             // s = 0 = Normal font (see styles.xml)
@@ -74,9 +74,15 @@ final class ExcelWorksheet
         }
     }
 
-    private function mapRowColumnToString(int $row, int $column): string
+    private function getCoordinate(int $row, int $column): string
     {
         $columnLetter = '';
+
+        // Maximum limit
+        $column = min($column, 16384);
+
+        $this->boundRow = max($this->boundRow, $row);
+        $this->boundColumn = max($this->boundColumn, $column);
 
         while ($column > 0) {
             $remainder = ($column - 1) % 26;
@@ -90,6 +96,10 @@ final class ExcelWorksheet
 
     public function createSheetXml(): string
     {
+        // The row and column bounds of all cells in this worksheet
+        $bound = $this->getCoordinate($this->boundRow, $this->boundColumn);
+        $this->dimension->setAttribute('ref', 'A1:' . $bound);
+
         return (string)$this->sheetXml->saveXML();
     }
 
@@ -113,10 +123,11 @@ final class ExcelWorksheet
         $worksheet->setAttribute('mc:Ignorable', 'x14ac xr xr2 xr3');
         $worksheet->setAttribute('xr:uid', '{00000000-0001-0000-0000-000000000000}');
 
-        $dimension = $this->sheetXml->createElement('dimension');
-        $worksheet->appendChild($dimension);
-        // @todo make dynamic
-        $dimension->setAttribute('ref', 'A1:C4');
+        $this->dimension = $this->sheetXml->createElement('dimension');
+        $worksheet->appendChild($this->dimension);
+
+        // The row and column bounds of all cells in this worksheet
+        $this->dimension->setAttribute('ref', 'A1:A1');
 
         $sheetViews = $this->sheetXml->createElement('sheetViews');
         $worksheet->appendChild($sheetViews);
