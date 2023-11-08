@@ -5,7 +5,7 @@ namespace Odan\Excel;
 use UnexpectedValueException;
 use ZipStream\ZipStream;
 
-final class ZipFile implements FileWriterInterface, FileReaderInterface
+final class ExcelStream implements FileWriterInterface, FileReaderInterface
 {
     private ZipStream $zip;
 

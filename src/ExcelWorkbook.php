@@ -4,87 +4,30 @@ namespace Odan\Excel;
 
 use DOMDocument;
 use DOMElement;
-use DOMNode;
 
-final class ExcelWriter
+final class ExcelWorkbook
 {
     private FileWriterInterface $file;
-    private DOMDocument $sheetXml;
-    private DOMNode $sheetData;
-    private int $rowIndex = 0;
-    /** @var array<string, int> */
-    private array $sharedStrings = [];
-    private string $sheetName = 'Sheet1';
+
+    /** @var ExcelSheet[] */
+    private array $sheets = [];
+
+    private SharedStrings $sharedStrings;
 
     public function __construct(FileWriterInterface $file)
     {
         $this->file = $file;
-        $this->initSheetXml();
+        $this->sharedStrings = new SharedStrings();
     }
 
-    public function setSheetName(string $sheetName): void
+    public function createSheet(string $sheetName = 'Sheet1'): ExcelSheet
     {
-        $this->sheetName = $sheetName;
-    }
+        $sheet = new ExcelSheet($this->sharedStrings);
+        $sheet->setSheetName($sheetName);
 
-    public function writeHead(array $values): void
-    {
-        $row = $this->sheetXml->createElement('row');
-        $this->sheetData->appendChild($row);
-        $row->setAttribute('r', (string)++$this->rowIndex);
+        $this->sheets[] = $sheet;
 
-        // @todo dynamic spans
-        $row->setAttribute('spans', '1:3');
-
-        foreach ($values as $colIndex => $value) {
-            $column = $this->sheetXml->createElement('c');
-            $column->setAttribute('r', $this->mapRowColumnToString($this->rowIndex, $colIndex + 1));
-            $row->appendChild($column);
-
-            // Apply the cell style by referencing it through the s attribute
-            // 1 = bold style
-            $column->setAttribute('s', '1');
-            $column->setAttribute('t', 's');
-            $sharedStringIndex = $this->createSharedStringIndex($value);
-            $valueElement = $this->sheetXml->createElement('v', (string)$sharedStringIndex);
-            $column->appendChild($valueElement);
-        }
-    }
-
-    public function writeRow(array $values): void
-    {
-        $row = $this->sheetXml->createElement('row');
-        $this->sheetData->appendChild($row);
-        $row->setAttribute('r', (string)++$this->rowIndex);
-        // @todo dynamic spans
-        $row->setAttribute('spans', '1:3');
-
-        foreach ($values as $colIndex => $value) {
-            $column = $this->sheetXml->createElement('c');
-            $column->setAttribute('r', $this->mapRowColumnToString($this->rowIndex, $colIndex + 1));
-            $row->appendChild($column);
-
-            // s = 0 = Normal font (see styles.xml)
-            $column->setAttribute('s', '0');
-            $column->setAttribute('t', 's');
-            $sharedStringIndex = $this->createSharedStringIndex($value);
-            $valueNode = $this->sheetXml->createElement('v', (string)$sharedStringIndex);
-            $column->appendChild($valueNode);
-        }
-    }
-
-    private function mapRowColumnToString(int $row, int $column): string
-    {
-        $columnLetter = '';
-
-        while ($column > 0) {
-            $remainder = ($column - 1) % 26;
-            $columnLetter = chr(65 + $remainder) . $columnLetter;
-            $column = floor(($column - $remainder) / 26);
-        }
-
-        // Combine the column letter(s) and row number to form the string
-        return $columnLetter . $row;
+        return $sheet;
     }
 
     public function generate(): void
@@ -97,35 +40,11 @@ final class ExcelWriter
         $this->file->addFile('xl/styles.xml', $this->createStylesXml());
         $this->file->addFile('xl/workbook.xml', $this->createWorkbookXml());
         $this->file->addFile('xl/sharedStrings.xml', $this->createSharedStringsXml());
-        $this->file->addFile('xl/worksheets/sheet1.xml', $this->createSheetXml());
-    }
 
-    private function createSharedStringsXml(): string
-    {
-        $dom = new DOMDocument('1.0', 'UTF-8');
-        $dom->formatOutput = true;
-        $dom->xmlStandalone = true;
-
-        $sst = $dom->createElement('sst');
-        $dom->appendChild($sst);
-        $sst->setAttribute('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
-        $sst->setAttribute('count', (string)count($this->sharedStrings));
-        $sst->setAttribute('uniqueCount', (string)count($this->sharedStrings));
-
-        foreach ($this->sharedStrings as $sharedString => $key) {
-            $si = $dom->createElement('si');
-            $sst->appendChild($si);
-            $textNode = $dom->createElement('t', $sharedString);
-            // $textNode->setAttribute('xml:space', 'preserve');
-            $si->appendChild($textNode);
+        foreach ($this->sheets as $index => $sheet) {
+            $filename = sprintf('xl/worksheets/sheet%s.xml', $index + 1);
+            $this->file->addFile($filename, $sheet->createSheetXml());
         }
-
-        return (string)$dom->saveXML();
-    }
-
-    private function createSheetXml(): string
-    {
-        return (string)$this->sheetXml->saveXML();
     }
 
     private function createContentTypesXml(): string
@@ -241,11 +160,13 @@ final class ExcelWriter
         $sheets = $dom->createElement('sheets');
         $workbook->appendChild($sheets);
 
-        $sheet = $dom->createElement('sheet');
-        $sheets->appendChild($sheet);
-        $sheet->setAttribute('name', $this->sheetName);
-        $sheet->setAttribute('sheetId', '1');
-        $sheet->setAttribute('r:id', 'rId2');
+        foreach ($this->sheets as $excelSheet) {
+            $sheet = $dom->createElement('sheet');
+            $sheets->appendChild($sheet);
+            $sheet->setAttribute('name', $excelSheet->getName());
+            $sheet->setAttribute('sheetId', '1'); // @todo Dynamic?
+            $sheet->setAttribute('r:id', 'rId2'); // @todo Dynamic?
+        }
 
         $calcPr = $dom->createElement('calcPr');
         $workbook->appendChild($calcPr);
@@ -568,70 +489,32 @@ final class ExcelWriter
         return (string)$dom->saveXML();
     }
 
-    private function initSheetXml(): void
+    private function createSharedStringsXml(): string
     {
-        // https://learn.microsoft.com/en-us/office/open-xml/working-with-sheets
+        $dom = new DOMDocument('1.0', 'UTF-8');
+        $dom->formatOutput = true;
+        $dom->xmlStandalone = true;
 
-        $this->sheetXml = new DOMDocument('1.0', 'UTF-8');
-        $this->sheetXml->formatOutput = true;
-        $this->sheetXml->xmlStandalone = true;
+        $sharedStrings = $this->sharedStrings->getSharedStrings();
+        $count = (string)count($sharedStrings);
 
-        $worksheet = $this->sheetXml->createElement('worksheet');
-        $this->sheetXml->appendChild($worksheet);
-        $worksheet->setAttribute('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
-        $worksheet->setAttribute('xmlns:r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships');
-        $worksheet->setAttribute('xmlns:mc', 'http://schemas.openxmlformats.org/markup-compatibility/2006');
-        $worksheet->setAttribute('xmlns:x14ac', 'http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac');
-        $worksheet->setAttribute('xmlns:xr', 'http://schemas.microsoft.com/office/spreadsheetml/2014/revision');
-        $worksheet->setAttribute('xmlns:xr2', 'http://schemas.microsoft.com/office/spreadsheetml/2015/revision2');
-        $worksheet->setAttribute('xmlns:xr3', 'http://schemas.microsoft.com/office/spreadsheetml/2016/revision3');
-        $worksheet->setAttribute('mc:Ignorable', 'x14ac xr xr2 xr3');
-        $worksheet->setAttribute('xr:uid', '{00000000-0001-0000-0000-000000000000}');
+        $sst = $dom->createElement('sst');
+        $dom->appendChild($sst);
+        $sst->setAttribute('xmlns', 'http://schemas.openxmlformats.org/spreadsheetml/2006/main');
+        $sst->setAttribute('count', $count);
+        $sst->setAttribute('uniqueCount', $count);
 
-        $dimension = $this->sheetXml->createElement('dimension');
-        $worksheet->appendChild($dimension);
-        // @todo make dynamic
-        $dimension->setAttribute('ref', 'A1:C4');
-
-        $sheetViews = $this->sheetXml->createElement('sheetViews');
-        $worksheet->appendChild($sheetViews);
-
-        $sheetView = $this->sheetXml->createElement('sheetView');
-        $sheetViews->appendChild($sheetView);
-        $sheetView->setAttribute('tabSelected', '1');
-        $sheetView->setAttribute('workbookViewId', '0');
-
-        $sheetFormatPr = $this->sheetXml->createElement('sheetFormatPr');
-        $worksheet->appendChild($sheetFormatPr);
-        $sheetFormatPr->setAttribute('defaultRowHeight', '15');
-
-        $this->sheetData = $this->sheetXml->createElement('sheetData');
-        $worksheet->appendChild($this->sheetData);
-
-        $pageMargins = $this->sheetXml->createElement('pageMargins');
-        $worksheet->appendChild($pageMargins);
-        $pageMargins->setAttribute('left', '0.7');
-        $pageMargins->setAttribute('right', '0.7');
-        $pageMargins->setAttribute('top', '0.75');
-        $pageMargins->setAttribute('bottom', '0.75');
-        $pageMargins->setAttribute('header', '0.3');
-        $pageMargins->setAttribute('footer', '0.3');
-    }
-
-    private function createSharedStringIndex(string $string): int
-    {
-        $index = $this->sharedStrings[$string] ?? null;
-        if ($index !== null) {
-            return $index;
+        foreach ($sharedStrings as $sharedString => $key) {
+            $si = $dom->createElement('si');
+            $sst->appendChild($si);
+            $textNode = $dom->createElement('t', $sharedString);
+            $si->appendChild($textNode);
         }
 
-        $newIndex = count($this->sharedStrings);
-        $this->sharedStrings[$string] = $newIndex;
-
-        return $newIndex;
+        return (string)$dom->saveXML();
     }
 
-    public function createElements(DOMDocument $dom, DOMElement $parentElement, string $tagName, array $items): void
+    private function createElements(DOMDocument $dom, DOMElement $parentElement, string $tagName, array $items): void
     {
         foreach ($items as $item) {
             $element = $this->createElementWithAttributes($dom, $tagName, $item);
@@ -639,7 +522,7 @@ final class ExcelWriter
         }
     }
 
-    public function createElementWithAttributes(DOMDocument $dom, string $tagName, array $attributes = []): DOMElement
+    private function createElementWithAttributes(DOMDocument $dom, string $tagName, array $attributes = []): DOMElement
     {
         $element = $dom->createElement($tagName);
         foreach ($attributes as $key => $value) {

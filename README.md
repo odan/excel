@@ -31,11 +31,11 @@ composer require odan/excel
 ## Usage
 
 ```php
-use Odan\Excel\ExcelWriter;
-use Odan\Excel\ZipFile;
+use Odan\Excel\ExcelWorkbook;
+use Odan\Excel\ExcelStream;
 
-$file = new ZipFile();
-$excel = new ExcelWriter($file);
+$file = new ExcelStream();
+$excel = new ExcelWorkbook($file);
 
 // Change sheet name
 $excel->setSheetName('My Sheet');
