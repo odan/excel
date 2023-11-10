@@ -1,5 +1,12 @@
 # odan/excel
 
+[![Latest Version on Packagist](https://img.shields.io/github/release/odan/excel.svg)](https://github.com/odan/excel/releases)
+[![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE)
+[![Build Status](https://github.com/odan/excel/workflows/build/badge.svg)](https://github.com/odan/excel/actions)
+[![Code Coverage](https://scrutinizer-ci.com/g/odan/excel/badges/coverage.png?b=master)](https://scrutinizer-ci.com/g/odan/excel/?branch=master)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/odan/excel/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/odan/excel/?branch=master)
+[![Total Downloads](https://img.shields.io/packagist/dt/odan/excel.svg)](https://packagist.org/packages/odan/excel/stats)
+
 Extreme fast in-memory Excel (XLSX) file writer.
 
 ## Requirements
@@ -247,7 +254,7 @@ Change the filename accordingly.
 
 ## Using the ZipStream-PHP package
 
-When working with very large Excel files, typically over 4 GB in size, 
+When working with very large Excel files, typically over 4 GB, 
 you can use the [ZipStream-PHP](https://github.com/maennchen/ZipStream-PHP) package to 
 create Excel files in the ZIP64 format, which is designed for handling such large files.
 
