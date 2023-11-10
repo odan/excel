@@ -2,10 +2,10 @@
 
 namespace Odan\Excel;
 
-interface FileReaderInterface
+interface ZipStreamInterface
 {
     /**
      * @return resource
      */
-    public function readStream(): mixed;
+    public function getStream(): mixed;
 }

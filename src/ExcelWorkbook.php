@@ -27,7 +27,7 @@ final class ExcelWorkbook
         return $sheet;
     }
 
-    public function save(FileWriterInterface $file): void
+    public function save(ZipStreamWriterInterface $file): void
     {
         $file->write('[Content_Types].xml', $this->createContentTypesXml());
         $file->write('_rels/.rels', $this->createRelsXml());
@@ -42,6 +42,8 @@ final class ExcelWorkbook
             $filename = sprintf('xl/worksheets/sheet%s.xml', $index + 1);
             $file->write($filename, $sheet->createSheetXml());
         }
+
+        $file->close();
     }
 
     private function createContentTypesXml(): string

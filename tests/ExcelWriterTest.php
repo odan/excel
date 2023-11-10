@@ -3,8 +3,9 @@
 namespace App\Excel\Test;
 
 use DOMDocument;
-use Odan\Excel\ExcelFile;
 use Odan\Excel\ExcelWorkbook;
+use Odan\Excel\Zip64Stream;
+use Odan\Excel\ZipDeflateStream;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -48,13 +49,19 @@ final class ExcelWriterTest extends TestCase
             $sheet2->addRow($rowData);
         }
 
-        $file = new ExcelFile();
+        $file = new ZipDeflateStream(__DIR__ . '/file1.xlsx');
         $workbook->save($file);
 
-        $data = stream_get_contents($file->readStream());
-        file_put_contents(__DIR__ . '/file.xlsx', $data);
-
+        $data = stream_get_contents($file->getStream());
         $this->assertStringStartsWith('PK', $data);
+
+        $file2 = new Zip64Stream(__DIR__ . '/file2.xlsx');
+        $workbook->save($file2);
+
+        $data = stream_get_contents($file2->getStream());
+        $this->assertStringStartsWith('PK', $data);
+
+        $this->assertTrue(true);
     }
 
     public function formatXlsx(): void
