@@ -73,7 +73,6 @@ $workbook->save($file);
 This data is purely an in-memory stream, 
 and it never spills over to disk, 
 regardless of the amount of data written to it.
-
 Use `php://memory` (default) when you want to 
 ensure that the data remains in memory and 
 don't want PHP to switch to disk storage, 
@@ -101,9 +100,6 @@ This kind of stream is suitable for most scenarios where you need temporary
 in-memory storage, but it should automatically switch to using temporary files 
 on disk to store the excess data when it overflows a certain threshold.
 
-The memory limit of `php://temp` can be controlled by appending `/maxmemory:NN`, 
-where NN is the maximum amount of data to keep in memory before using a temporary file, in bytes.
-
 ```php
 use Odan\Excel\ZipDeflateStream;
 
@@ -112,6 +108,9 @@ use Odan\Excel\ZipDeflateStream;
 $file = new ZipDeflateStream('php://temp');
 $workbook->save($file);
 ```
+
+The memory limit of `php://temp` can be controlled by appending `/maxmemory:NN`,
+where NN is the maximum amount of data to keep in memory before using a temporary file, in bytes.
 
 This optional parameter allows setting the memory limit before `php://temp` starts using a temporary file.
 
@@ -127,26 +126,14 @@ $file = new ZipDeflateStream('php://temp/maxmemory:' . $maxMb);
 $workbook->save($file);
 ```
 
-**Generating only In-Memory Excel file**
-
-```php
-use Odan\Excel\ZipDeflateStream;
-
-// ...
-
-$file = new ZipDeflateStream();
-$workbook->save($file);
-```
-
 **Save file in filesystem**
 
 If the file does not exist, it will be created.
 If it already exists, its content will be truncated (cleared)
 when you write data to it.
-
 Make sure the server has write permissions.
 
-Directly as file stream:
+Directly as file stream...
 
 ```php
 use Odan\Excel\ZipDeflateStream;
@@ -157,7 +144,7 @@ $file = new ZipDeflateStream('example.xlsx');
 $workbook->save($file);
 ```
 
-or via in-memory stream...
+... or via in-memory stream.
 
 ```php
 use Odan\Excel\ZipDeflateStream;
@@ -253,7 +240,7 @@ $contentDisposition = sprintf("attachment; filename*=UTF-8''%s", $outputFilename
 
 // Add the response headers
 $response = $response
-    ->withHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    ->withHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     ->withHeader('Content-Disposition', $contentDisposition)
     ->withHeader('Pragma', 'private')
     ->withHeader('Cache-Control', 'private, must-revalidate')
@@ -267,8 +254,9 @@ Change the filename accordingly.
 
 ## Using the ZipStream-PHP package
 
-When you are dealing with extremely large Excel files, means over 4 GB, you
-can integrate the ZipStream-PHP package, which is able to generate ZIP64 compatible Excel (ZIP) files.
+When working with very large Excel files, typically over 4 GB in size, 
+you can use the [ZipStream-PHP](https://github.com/maennchen/ZipStream-PHP) package to 
+create Excel files in the ZIP64 format, which is designed for handling such large files.
 
 **Installation**
 
@@ -276,7 +264,8 @@ can integrate the ZipStream-PHP package, which is able to generate ZIP64 compati
 composer require maennchen/zipstream-php
 ```
 
-Then use the `Odan\Excel\Zip64Stream` class to generate Excel files with enhanced compatibility and larger filesize:
+Next, use the `Odan\Excel\Zip64Stream` class for creating Excel 
+files that offer improved compatibility and support larger file sizes.
 
 ```php
 use Odan\Excel\ExcelWorkbook;
