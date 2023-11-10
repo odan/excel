@@ -70,13 +70,9 @@ $workbook->save($file);
 
 **Generating only In-Memory Excel file**
 
-This data is purely an in-memory stream, 
-and it never spills over to disk, 
-regardless of the amount of data written to it.
-Use `php://memory` (default) when you want to 
-ensure that the data remains in memory and 
-don't want PHP to switch to disk storage, 
-even for large amounts of data.
+This data is a pure in-memory stream `php://memory` (default)
+that never overflows onto the hard disk, 
+regardless of the amount of data written.
 
 ```php
 use Odan\Excel\ZipDeflateStream;
@@ -87,13 +83,13 @@ $file = new ZipDeflateStream();
 $workbook->save($file);
 ```
 
-**Generating a temporary memory-stream with disk access**
+**Generating temporary files**
 
 The `php://temp` stream is designed for temporary data storage in memory.
 
 However, if the amount of data written exceeds a certain threshold 
 (usually around 2KB or 8KB, depending on PHP versions and configurations), 
-PHP may automatically switch to using temporary files on disk to store the excess data. 
+PHP may automatically switch to using temporary files on disk to store the data. 
 This is done to conserve memory when dealing with large amounts of data.
 
 This kind of stream is suitable for most scenarios where you need temporary 
@@ -144,7 +140,7 @@ $file = new ZipDeflateStream('example.xlsx');
 $workbook->save($file);
 ```
 
-... or via in-memory stream.
+... or with stream_get_contents.
 
 ```php
 use Odan\Excel\ZipDeflateStream;
@@ -177,7 +173,7 @@ $file = new ZipDeflateStream($filename);
 $workbook->save($file);
 ```
 
-**Reading the stream contents**
+**Reading the stream contents as string**
 
 ```php
 use Odan\Excel\ZipDeflateStream;
@@ -187,11 +183,8 @@ use Odan\Excel\ZipDeflateStream;
 $file = new ZipDeflateStream();
 $workbook->save($file);
 
-// Get native stream
-$stream = $file->getStream();
-
 // Read contents of stream into a string
-$data = stream_get_contents($stream);
+$data = stream_get_contents($file->getStream());
 ```
 
 **Stream directly to the HTTP response**
