@@ -230,8 +230,6 @@ final class ExcelWorkbook
         $font2->appendChild($family2);
         $family2->setAttribute('val', '2');
 
-        // ----
-
         // Create the root element <fills>
         $fills = $dom->createElement('fills');
         $styleSheet->appendChild($fills);
@@ -303,7 +301,6 @@ final class ExcelWorkbook
         $xf2->setAttribute('xfId', '0');
         $xf2->setAttribute('applyFont', '1'); // Apply bold font
 
-        // ---
         // Create the root element <cellStyles>
         $cellStyles = $dom->createElement('cellStyles');
         $styleSheet->appendChild($cellStyles);
