@@ -78,7 +78,7 @@ $workbook->save($file);
 
 This data is a pure in-memory stream `php://memory` (default)
 that never overflows onto the hard disk, 
-regardless of the amount of data written.
+regardless of the amount of written data.
 
 ```php
 use Odan\Excel\ZipDeflateStream;
@@ -124,7 +124,6 @@ use Odan\Excel\ZipDeflateStream;
 // Set the limit to 5 MB.
 $maxMb = 5 * 1024 * 1024;
 $file = new ZipDeflateStream('php://temp/maxmemory:' . $maxMb);
-
 $workbook->save($file);
 ```
 
