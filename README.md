@@ -34,10 +34,9 @@ very fast data output, but not for fancy worksheet styles.
 If you need more layout and color options, you may better use a
 different package, such as PhpSpreadsheet.
 
-* Number of workbooks: Limited by available memory and system resources.
-* Sheets in a workbook: Limited by available memory (default is 1 sheet).
-* Maximal number of columns: 16,384 (specification limit)
-* Maximal number of rows: 1,048,576 (specification limit)
+* Number of workbooks and sheets: Limited by available memory and system resources.
+* Maximal number of columns: 16.384 (specification limit)
+* Maximal number of rows: 1.048.576 (specification limit)
 * Font styles: 2 (normal for rows and **bold** for columns)
 
 ## Installation
